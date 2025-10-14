@@ -1,16 +1,15 @@
 import asyncHandler from "../utils/asyncHandler.js";
-import ApiError from "../utils/apiError.js";
+import { ApiError } from "../utils/apiError.js";
 import { User } from "../models/user.model.js";
-import apiError from "../utils/apiError.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
 import { ApiResponce } from "../utils/apiResponse.js";
 
 const registerUser = asyncHandler(async (req, res) => {
-  const { username, fullname, email, password } = req.body;
-  console.log(email);
+  const { username, fullName, email, password } = req.body;
+  // console.log(email);
 
   if (
-    [username, fullname, email, password].some((feild) => feild?.trim() === "")
+    [username, fullName, email, password].some((feild) => feild?.trim() === "")
   ) {
     throw new ApiError(400, "All Feilds is required");
   }
@@ -24,21 +23,30 @@ const registerUser = asyncHandler(async (req, res) => {
   }
 
   const avatarLocalPath = req.files?.avatar[0]?.path;
-  const coverImageLocalPath = req.files?.coverImage[0]?.path;
+  // const coverImageLocalPath = req.files?.coverImage[0]?.path;
+
+  let coverImageLocalPath;
+  if (
+    req.files &&
+    Array.isArray(req.files.coverImage) &&
+    req.files.coverImage.length > 0
+  ) {
+    coverImageLocalPath = req.files.coverImage[0].path;
+  }
 
   if (!avatarLocalPath) {
-    throw new apiError(400, "Avatar is required");
+    throw new ApiError(400, "Avatar is required");
   }
 
   const avatar = await uploadOnCloudinary(avatarLocalPath);
   const coverImage = await uploadOnCloudinary(coverImageLocalPath);
 
   if (!avatar) {
-    throw new apiError(400, "Avatar is required");
+    throw new ApiError(400, "Avatar is required");
   }
 
   let user = await User.create({
-    fullname,
+    fullName,
     avatar: avatar.url,
     coverImage: coverImage?.url || "",
     email,
@@ -50,7 +58,7 @@ const registerUser = asyncHandler(async (req, res) => {
   );
 
   if (!createdUserId) {
-    throw new apiError(404, "User Not found ");
+    throw new ApiError(404, "User Not found ");
   }
 
   return res
