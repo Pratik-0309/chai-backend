@@ -159,52 +159,57 @@ const logoutuser = asyncHandler(async (req, res) => {
     .json(new ApiResponce(200, {}, "User Logged Out Successfully"));
 });
 
+// You log in, get an accessToken valid for 15 minutes.
+// You keep using the app — after 15 minutes, it expires.
+// You don’t want the user to log in again every 15 minutes.
+// So, you use the refresh token to get a new access token — without forcing the user to re-login.
+// Controller to refresh access token
 const refreshAccessToken = asyncHandler(async (req, res) => {
-  const incomingRefreshToken = req.cookie.refreshToken || req.body.accessToken;
+  const incomingRefreshToken =
+    req.cookies.refreshToken || req.body.refreshToken;
 
   if (!incomingRefreshToken) {
     throw new ApiError(401, "Unauthorized Request");
   }
 
- try {
-   const decodedToken = jwt.verify(
-     incomingRefreshToken,
-     process.env.REFRESH_TOKEN_SECRET
-   );
- 
-   const user = await User.findById(decodedToken._id);
- 
-   if (!user) {
-     throw new ApiError(401, "Invalid Refresh token");
-   }
- 
-   if (incomingRefreshToken !== user?.refreshToken) {
-     throw new ApiError(401, "Refresh Token is Expired or Used");
-   }
- 
-   const options = {
-     httpOnly: true,
-     secure: true,
-   };
- 
-   const { accessToken, newRefreshToken } = await generateAccessAndRefreshTokens(
-     user._id
-   );
- 
-   return res
-     .status(200)
-     .cookie("accessToken", accessToken, options)
-     .cookie("refreshToken", newRefreshToken, options)
-     .json(
-       new ApiResponce(
-         200,
-         { accessToken, refreshToken: newRefreshToken },
-         "Access Token Refresh Successfully"
-       )
-     );
- } catch (error) {
-    throw new ApiError(401, error?.message || "Invalid Refresh Token")
- }
+  try {
+    const decodedToken = jwt.verify(
+      incomingRefreshToken,
+      process.env.REFRESH_TOKEN_SECRET
+    );
+
+    const user = await User.findById(decodedToken._id);
+
+    if (!user) {
+      throw new ApiError(401, "Invalid Refresh token");
+    }
+
+    if (incomingRefreshToken !== user?.refreshToken) {
+      throw new ApiError(401, "Refresh Token is Expired or Used");
+    }
+
+    const options = {
+      httpOnly: true,
+      secure: true,
+    };
+
+    const { accessToken, newRefreshToken } =
+      await generateAccessAndRefreshTokens(user._id);
+
+    return res
+      .status(200)
+      .cookie("accessToken", accessToken, options)
+      .cookie("refreshToken", newRefreshToken, options)
+      .json(
+        new ApiResponce(
+          200,
+          { accessToken, refreshToken: newRefreshToken },
+          "Access Token Refresh Successfully"
+        )
+      );
+  } catch (error) {
+    throw new ApiError(401, error?.message || "Invalid Refresh Token");
+  }
 });
 
-export { registerUser, loginUser, logoutuser , refreshAccessToken };
+export { registerUser, loginUser, logoutuser, refreshAccessToken };
