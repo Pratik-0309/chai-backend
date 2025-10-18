@@ -4,6 +4,8 @@ import { User } from "../models/user.model.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
 import { ApiResponce } from "../utils/apiResponse.js";
 import jwt, { verify } from "jsonwebtoken";
+import { v2 as cloudinary } from "cloudinary";
+import fs from "fs";
 
 const generateAccessAndRefreshTokens = async (userId) => {
   try {
@@ -238,15 +240,32 @@ const getCurrentUser = asyncHandler(async (req, res) => {
 
 const updateUserAvatar = asyncHandler(async (req, res) => {
   const avatarLocalPath = req.file?.path;
+
   if (!avatarLocalPath) {
     throw new ApiError(400, "Avatar is required");
   }
+
+  const user = await User.findById(req.user._id);
+
+  if (!user) {
+    throw new ApiError(404, "User not found");
+  }
+
+  if (user.avatar) {
+    const publicId = user.avatar.split("/").slice(-2).join("/").split(".")[0];
+    try {
+      await cloudinary.uploader.destroy(publicId);
+    } catch (error) {
+      console.error("Error deleting previous avatar from Cloudinary:", error);
+    }
+  }
+
   const avatar = await uploadOnCloudinary(avatarLocalPath);
   if (!avatar.url) {
     throw new ApiError(400, "Avatar upload failed");
   }
 
-  const user = await User.findByIdAndUpdate(
+  const updatedUser = await User.findByIdAndUpdate(
     req.user._id,
     {
       $set: { avatar: avatar.url },
@@ -256,7 +275,9 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
 
   return res
     .status(200)
-    .json(new ApiResponce(200, user, "User Avatar Updated Successfully"));
+    .json(
+      new ApiResponce(200, updatedUser, "User Avatar Updated Successfully")
+    );
 });
 
 export {
