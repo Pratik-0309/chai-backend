@@ -6,9 +6,7 @@ import { ApiResponce } from "../utils/apiResponse.js";
 import jwt from "jsonwebtoken";
 import { v2 as cloudinary } from "cloudinary";
 import fs from "fs";
-import { subscribe } from "diagnostics_channel";
 import mongoose from "mongoose";
-import { lookup } from "dns";
 
 const generateAccessAndRefreshTokens = async (userId) => {
   try {
@@ -144,7 +142,7 @@ const logoutuser = asyncHandler(async (req, res) => {
     req.user._id,
     {
       $set: {
-        refreshToken: undefined,
+        refreshToken: 1, // this removes the field from the document
       },
     },
     {
@@ -238,7 +236,9 @@ const changeCurrentPassword = asyncHandler(async (req, res) => {
 const getCurrentUser = asyncHandler(async (req, res) => {
   return res
     .status(200)
-    .json(200, req.user, "Current User fetched successfully");
+    .json(
+      new ApiResponce(200, req.user, "Current User fetched successfully")
+    );
 });
 
 const updateUserAvatar = asyncHandler(async (req, res) => {
@@ -253,7 +253,7 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
   if (!user) {
     throw new ApiError(404, "User not found");
   }
-
+  // to delete previous avatar from cloudinary
   if (user.avatar) {
     const publicId = user.avatar.split("/").slice(-2).join("/").split(".")[0];
     try {
@@ -322,7 +322,7 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
           $size: "$subscriberTo",
         },
         isSubscribed: {
-          $condition: {
+          $cond: {
             if: { $in: [req.user?._id, "$subscribers.subscriber"] },
             then: true,
             else: false,
