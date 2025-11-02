@@ -76,6 +76,10 @@ const updateVideo = asyncHandler(async (req, res) => {
     throw new ApiError(404, "Video not found");
   }
 
+  if(video.owner.toString() !== req.user._id.toString()){
+    throw new ApiError(403,"You are not authorized to update this video");
+  }
+
   const uploadedVideo = await uploadOnCloudinary(videofile);
 
   if (!uploadedVideo?.url) {
@@ -96,10 +100,28 @@ const updateVideo = asyncHandler(async (req, res) => {
 
 const deleteVideo = asyncHandler(async (req, res) => {
     const { videoId } = req.params
-    const videoToBeDelete = await Video.findByIdAndDelete(videoId)
+    const videoToBeDelete = await Video.findById(videoId);
+
+    if(videoToBeDelete.owner.toString() !== req.user._id.toString()){
+    throw new ApiError(403,"You are not authorized to update this video");
+  }
+
     if(!videoToBeDelete){
         throw new ApiError(404,"Video Not Found")
     }
+
+     if (videoToBeDelete.videoFile) {
+    const publicId = videoToBeDelete.videoFile.split("/").slice(-1)[0].split(".")[0];
+    try {
+      await cloudinary.uploader.destroy(publicId, { resource_type: "video" });
+      console.log("🎬 Deleted from Cloudinary:", publicId);
+    } catch (err) {
+      console.log("⚠️ Cloudinary deletion failed:", err.message);
+    }
+  }
+
+    await videoToBeDelete.deleteOne();
+
     console.log("✅ Video deleted successfully:", videoToBeDelete);
     res.status(200).json(new ApiResponce(200, videoToBeDelete, "Video Deleted Successfully"))
 

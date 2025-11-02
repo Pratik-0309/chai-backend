@@ -20,13 +20,15 @@ app.use(cookieParser());
 // Routes Import
 import userRouter from "./routes/user.route.js";
 import videoRouter from "./routes/video.route.js"
+import tweetRouter from "./routes/tweet.route.js"
 
 // Route Declaration
 app.use("/api/v1/users", userRouter);
 app.use("/api/v1/videos", videoRouter);
+app.use("/api/v1/tweets", tweetRouter);
 
 app.use((err, req, res, next) => {
-  console.error("🔥 ERROR:", err);
+  console.error("ERROR:", err);
 
   // If it's an instance of ApiError, send a clean JSON response
   if (err instanceof ApiError) {

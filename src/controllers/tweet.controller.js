@@ -19,7 +19,7 @@ const createTweet = asyncHandler(async (req, res) => {
 
     res
     .status(201)
-    .json(new ApiResponce(201, "Tweet created successfully", {tweet}));
+    .json(new ApiResponce(201,tweet, "Tweet created successfully"));
 })
 
 const getUserTweets = asyncHandler(async (req, res) => {
@@ -33,7 +33,7 @@ const getUserTweets = asyncHandler(async (req, res) => {
 
 const updateTweet = asyncHandler(async (req, res) => {
     const {content} = req.body;
-    const tweetId = req.params.tweetId;
+    const {tweetId} = req.params;
 
     if(!content){
         throw new ApiError(400,"Tweet content is required");
@@ -43,28 +43,43 @@ const updateTweet = asyncHandler(async (req, res) => {
         throw new ApiError(400,"Tweet ID is required");
     }
 
-    const updatedTweet = await Tweet.findOneAndUpdate(
-        { _id: tweetId, owner: req.user._id },
-        {
-            $set: {content}
-        },
-        { new: true }
-    )
+    const tweetToBeUpdate = await Tweet.findById(tweetId);
+    if(!tweetToBeUpdate){
+        throw new ApiError(404,"Tweet Not Found")
+    }
+
+    if(tweetToBeUpdate.owner.toString() !== req.user._id.toString()){
+        throw new ApiError(403,"You are not authorized to update this tweet");
+    }
+
+    tweetToBeUpdate.content = content;
+    const updatedTweet = await tweetToBeUpdate.save();   
+
+    console.log("✅ Tweet updated successfully:", updatedTweet);
+    res.status(200).json(new ApiResponce(200, updatedTweet, "Tweet Updated Successfully"))   
 
 })
 
 const deleteTweet = asyncHandler(async (req, res) => {
-    const tweetId = req.params;
+    const {tweetId} = req.params;
+
     if(!tweetId){
         throw new ApiError(400,"Tweet ID is required");
     }
-    const tweetToBeDelete = await Tweet.findByIdAndDelete(tweetId)
+
+    const tweetToBeDelete = await Tweet.findById(tweetId)
+
+    if(tweetToBeDelete.owner.toString() !== req.user._id.toString()){
+        throw new ApiError(403,"You are not authorized to delete this tweet");
+    }               
     if(!tweetToBeDelete){
         throw new ApiError(404,"Tweet Not Found")
     }
 
-    console.log("✅ Tweet deleted successfully:", tweetToBeDelete);
-    res.status(200).json(new ApiResponce(200, tweetToBeDelete, "Tweet Deleted Successfully"))
+   const deletedTweet = await Tweet.findOneAndDelete({_id: tweetId})
+
+    console.log(" Tweet deleted successfully:", deletedTweet);
+    res.status(200).json(new ApiResponce(200, deletedTweet, "Tweet Deleted Successfully"))
 })
 
 export {
