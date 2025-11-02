@@ -7,10 +7,6 @@ const videoSchema = new mongoose.Schema(
       type: String,
       require: true,
     },
-    thumbnail: {
-      type: String,
-      require: true,
-    },
     title: {
       type: String,
       require: true,
@@ -32,7 +28,7 @@ const videoSchema = new mongoose.Schema(
       default: true,
     },
     owner: {    
-      type: Schema.types.objectId,
+      type: Schema.Types.ObjectId,
       ref: "User",
     },
   },
